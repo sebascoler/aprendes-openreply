@@ -4,7 +4,7 @@ Esto es lo único de OpenReply que no se puede automatizar: requiere tu login de
 
 Vas a necesitar tener a mano:
 
-- La URL pública: `https://reply.aprendes.ai` (ya desplegada y respondiendo).
+- La URL pública: `https://envios.aprendes.ai` (ya desplegada y respondiendo).
 - El valor de `WEBHOOK_VERIFY_TOKEN` del `.env` del VPS (`grep WEBHOOK_VERIFY_TOKEN /opt/aprendes-openreply/.env`).
 - El teléfono con la app de Instagram de la cuenta de Aprendes.ai. Tiene que ser cuenta profesional (Empresa o Creador).
 
@@ -57,7 +57,7 @@ Hasta que no aceptes acá, la cuenta no es tester de verdad y el login va a segu
 En el producto Instagram: **Configurar el inicio de sesión para empresas de Instagram → Configuración del inicio de sesión para empresas**. En "URI de redireccionamiento de OAuth válidos" agregá exactamente:
 
 ```
-https://reply.aprendes.ai/api/instagram/callback
+https://envios.aprendes.ai/api/instagram/callback
 ```
 
 Sin barra final. Si falta o está mal, conectar la cuenta falla con `redirect_uri mismatch`.
@@ -68,7 +68,7 @@ No hace falta la "URL para insertar" que Meta muestra ahí. OpenReply arma su pr
 
 En el mismo producto Instagram, paso **Configurar webhooks**:
 
-- URL de devolución de llamada: `https://reply.aprendes.ai/api/webhook`
+- URL de devolución de llamada: `https://envios.aprendes.ai/api/webhook`
 - Token de verificación: el valor de `WEBHOOK_VERIFY_TOKEN` del `.env`
 - **Verificar y guardar**. Tiene que pasar al instante, porque la app contesta el challenge de Meta. Si el botón está gris, hacé clic en el campo del token y pegalo de nuevo: editar la URL suele vaciarlo.
 - Suscribite a los campos **`comments`** y **`messages`**.
@@ -87,9 +87,9 @@ En el menú lateral, **Publicar**. Antes te va a exigir tres URLs. OpenReply ya 
 
 | Campo | URL |
 | --- | --- |
-| Política de privacidad | `https://reply.aprendes.ai/privacy` |
-| Condiciones del servicio | `https://reply.aprendes.ai/terms` |
-| Instrucciones de eliminación de datos | `https://reply.aprendes.ai/data-deletion` |
+| Política de privacidad | `https://envios.aprendes.ai/privacy` |
+| Condiciones del servicio | `https://envios.aprendes.ai/terms` |
+| Instrucciones de eliminación de datos | `https://envios.aprendes.ai/data-deletion` |
 
 Cargalas en **Configuración de la app → Básica** y publicá.
 
@@ -103,9 +103,9 @@ Si más adelante quisiéramos conectar una segunda cuenta que controlamos, se re
 
 ## 7. Conectar y probar de punta a punta
 
-1. Entrá a `https://reply.aprendes.ai`, pedí el magic link con `sebas@aprendes.ai` y abrilo desde el correo.
+1. Entrá a `https://envios.aprendes.ai`, pedí el magic link con `sebas@aprendes.ai` y abrilo desde el correo.
 2. **Settings → Connect Instagram**. Tiene que aparecer la pantalla de consentimiento de Instagram y volver al dashboard con la cuenta conectada.
-3. Verificá `https://reply.aprendes.ai/api/health`: `status: "ok"` y `worker.healthy: true`.
+3. Verificá `https://envios.aprendes.ai/api/health`: `status: "ok"` y `worker.healthy: true`.
 4. Creá una campaña sobre un post o reel con la palabra clave `TEST`.
 5. **Desde otra cuenta de Instagram** comentá `TEST` en ese post. Tiene que ser otra cuenta: OpenReply ignora a propósito los comentarios de la cuenta conectada.
 6. Tiene que llegar el DM y aparecer una fila `SENT` en **DM Logs**.
@@ -116,7 +116,7 @@ Si más adelante quisiéramos conectar una segunda cuenta que controlamos, se re
 | --- | --- |
 | "Insufficient Developer Role" al conectar | No aceptaste la invitación de tester dentro de Instagram (paso 3, mitad 2). |
 | `redirect_uri mismatch` | La redirect URI del paso 4 no coincide exactamente. |
-| El botón Verificar del webhook falla | La app no responde en el dominio, o el token no coincide con `WEBHOOK_VERIFY_TOKEN`. Probá `https://reply.aprendes.ai/api/health` en el navegador. |
+| El botón Verificar del webhook falla | La app no responde en el dominio, o el token no coincide con `WEBHOOK_VERIFY_TOKEN`. Probá `https://envios.aprendes.ai/api/health` en el navegador. |
 | El Test del webhook llega pero los comentarios reales no | La app está en modo Desarrollo. Publicala (paso 6). |
 | Conecta bien pero todas las llamadas a `graph.instagram.com` dan `Unsupported request, code=100` | La cuenta que conectaste no tiene rol en la app. Repetí el paso 3 con esa cuenta. |
 | `worker.healthy: false` en `/api/health` | El worker no corre o no llega a Redis. `docker compose logs worker` en el VPS. |

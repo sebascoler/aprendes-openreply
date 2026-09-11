@@ -1,6 +1,6 @@
 # aprendes-openreply
 
-Despliegue de [OpenReply](https://github.com/diwenne/openreply) en el VPS de Aprendes.ai. OpenReply es un ManyChat open source: cuando alguien comenta una palabra clave en un post o reel de Instagram, recibe un DM automático por la API oficial de Meta. Corre en `https://reply.aprendes.ai`.
+Despliegue de [OpenReply](https://github.com/diwenne/openreply) en el VPS de Aprendes.ai. OpenReply es un ManyChat open source: cuando alguien comenta una palabra clave en un post o reel de Instagram, recibe un DM automático por la API oficial de Meta. Corre en `https://envios.aprendes.ai`.
 
 Este repo no tiene código de la app. Tiene lo necesario para correrla y operarla:
 
@@ -35,7 +35,7 @@ Los tres contenedores de la app leen el mismo `.env`, así que `ENCRYPTION_KEY` 
 
 ## Instalación en el VPS
 
-Requisitos: Ubuntu con Docker y Docker Compose v2, puertos 80 y 443 abiertos en el firewall de Hostinger, y el DNS de `reply.aprendes.ai` apuntando a la IP del VPS (registro A en Namecheap, TTL el mínimo).
+Requisitos: Ubuntu con Docker y Docker Compose v2, puertos 80 y 443 abiertos en el firewall de Hostinger, y el DNS de `envios.aprendes.ai` apuntando a la IP del VPS (registro A con host `envios` en Namecheap. Los TXT y MX que Resend ya tiene en ese subdominio no chocan con un registro A).
 
 ```bash
 # 0. Docker, si el VPS no lo trae
@@ -43,7 +43,7 @@ curl -fsSL https://get.docker.com | sh
 
 # 1. Clonar este repo
 sudo mkdir -p /opt && cd /opt
-git clone git@github.com:sebascoler/aprendes-openreply.git
+git clone https://github.com/sebascoler/aprendes-openreply.git   # es privado: usuario + personal access token
 cd aprendes-openreply
 chmod +x scripts/*.sh
 
@@ -69,8 +69,8 @@ Después de editar el `.env`, `docker compose up -d` relee los valores y reinici
 
 ## Después de instalar
 
-1. Abrí `https://reply.aprendes.ai/api/health`. Tiene que dar `status: "ok"` con `worker.healthy: true`.
-2. Entrá a `https://reply.aprendes.ai` con `sebas@aprendes.ai`. Solo los emails de `ALLOWED_EMAILS` pueden pedir magic link.
+1. Abrí `https://envios.aprendes.ai/api/health`. Tiene que dar `status: "ok"` con `worker.healthy: true`.
+2. Entrá a `https://envios.aprendes.ai` con `sebas@aprendes.ai`. Solo los emails de `ALLOWED_EMAILS` pueden pedir magic link.
 3. Seguí `docs/meta-app.md` para la app de Meta, conectar la cuenta y hacer la prueba de punta a punta.
 
 ## Operación

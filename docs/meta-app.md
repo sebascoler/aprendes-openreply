@@ -17,14 +17,21 @@ Vas a necesitar tener a mano:
 
 No elijas "Autenticar con Facebook Login" ni "Crear y gestionar anuncios con la API de marketing". OpenReply usa Instagram Login. Si por error agregaste el de Marketing API, eliminalo: tiene requisitos de revisión propios y bloquea la publicación.
 
+**Si la pantalla de casos de uso no apareció** (o no mostraba el de Instagram): la app quedó creada sin el producto Instagram, y sin ese producto no existen el App ID ni el App Secret de Instagram. Se agrega después, desde el panel de la app:
+
+- Menú lateral → **Casos de uso** → **Personalizar** / **Agregar caso de uso** → "Gestionar mensajes y contenido en Instagram".
+- O, en paneles más viejos, al final del menú lateral → **Agregar producto** → tarjeta **Instagram** → **Configurar**.
+
+Al agregarlo aparece **Instagram** en el menú lateral, y adentro la pantalla **"Configuración de la API con inicio de sesión de Instagram"**, que es donde viven los pasos 2 a 5 de esta guía. Si el panel no deja agregar Instagram (app creada con un tipo incompatible), borrá la app y creá otra: en la pantalla de casos de uso hay un buscador o filtro "Todos" donde sí aparece.
+
 ## 2. Copiar los tres secretos al `.env`
 
 Hay dos App ID y dos App Secret, y se confunden. El mapeo es este:
 
 | Variable en `.env` | Dónde está en el panel de Meta |
 | --- | --- |
-| `INSTAGRAM_APP_ID` | Producto **Instagram** → "Configuración de la API con inicio de sesión de Instagram". Es un número tipo `2036...` |
-| `INSTAGRAM_APP_SECRET` | Misma pantalla, botón **Mostrar** |
+| `INSTAGRAM_APP_ID` | Producto **Instagram** → "Configuración de la API con inicio de sesión de Instagram". En la cabecera de esa pantalla, campo "Identificador de la app de Instagram". Es un número tipo `2036...` |
+| `INSTAGRAM_APP_SECRET` | Misma cabecera, campo "Clave secreta de la app de Instagram", botón **Mostrar** |
 | `FACEBOOK_APP_SECRET` | **Configuración de la app → Básica → Clave secreta de la app**, botón Mostrar |
 
 El App ID de Instagram no es el mismo número que el "Identificador de la app" de Facebook que aparece en Configuración básica. Usá el que está bajo el producto Instagram.

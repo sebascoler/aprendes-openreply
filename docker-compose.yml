@@ -1,0 +1,121 @@
+# OpenReply en el VPS de Aprendes.ai.
+#
+# Seis contenedores: web (Next.js: dashboard + webhook), worker (cola de DMs),
+# cron (refresco de tokens y jobs periódicos), postgres, redis y caddy (HTTPS).
+#
+# La imagen de la app se construye directo desde el repo upstream, pinneado al
+# commit OPENREPLY_REF que está en .env. No hay fork: para actualizar se cambia
+# el commit y se reconstruye (scripts/update.sh).
+#
+# Todo lo que no sea Caddy queda en la red interna de compose; solo Caddy
+# expone 80/443 al exterior.
+
+x-openreply: &openreply
+  image: aprendes-openreply:${OPENREPLY_REF:-main}
+  env_file: .env
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  web:
+    <<: *openreply
+    build:
+      context: https://github.com/diwenne/openreply.git#${OPENREPLY_REF:-main}
+    # Las migraciones corren al arrancar y no en el build: durante el build no
+    # hay red hacia Postgres. El worker y el cron esperan a que web esté sano,
+    # así que nunca tocan una base sin migrar.
+    command: ["sh", "-c", "npx prisma migrate deploy && npm run start"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # /api/health devuelve 503 mientras el worker no reportó latido. Para el
+      # healthcheck del contenedor web alcanza con que Next responda.
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.status===200||r.status===503?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  worker:
+    <<: *openreply
+    command: ["npm", "run", "worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+  cron:
+    <<: *openreply
+    command: ["sh", "scripts/cron.sh"]
+    environment:
+      CRON_BASE_URL: http://web:3000
+    depends_on:
+      web:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: openreply
+      POSTGRES_USER: openreply
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env (corré scripts/init-env.sh)}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openreply -d openreply"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # appendonly: la cola sobrevive a un reinicio. noeviction: BullMQ lo exige,
+    # si Redis descartara claves se perderían jobs en silencio.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      OPENREPLY_DOMAIN: ${OPENREPLY_DOMAIN:?Falta OPENREPLY_DOMAIN en .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:

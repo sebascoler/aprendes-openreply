@@ -1,6 +1,0 @@
-# Caddy pide y renueva el certificado de Let's Encrypt solo. Requiere que el
-# DNS del dominio ya apunte al VPS y que los puertos 80 y 443 estén abiertos.
-{$OPENREPLY_DOMAIN} {
-	encode zstd gzip
-	reverse_proxy web:3000
-}

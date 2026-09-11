@@ -6,8 +6,7 @@ Este repo no tiene código de la app. Tiene lo necesario para correrla y operarl
 
 | Archivo | Qué es |
 | --- | --- |
-| `docker-compose.yml` | Los seis contenedores: web, worker, cron, postgres, redis, caddy. |
-| `Caddyfile` | Proxy HTTPS con certificado automático de Let's Encrypt. |
+| `docker-compose.yml` | Los cinco contenedores: web, worker, cron, postgres, redis. El HTTPS lo da el Traefik que ya corre en el VPS. |
 | `.env.example` | Plantilla de configuración. `scripts/init-env.sh` la convierte en `.env` con secretos generados. |
 | `scripts/` | Instalación, deploy, actualización, backup y health check. |
 | `docs/meta-app.md` | Guía paso a paso de la app de Meta (la parte manual). |
@@ -17,7 +16,7 @@ La imagen se construye directo desde el repo upstream, pinneada al commit `OPENR
 ## Cómo está armado
 
 ```
-Instagram (Meta)  ──webhook──▶  caddy :443  ──▶  web :3000  (dashboard + /api/webhook)
+Instagram (Meta)  ──webhook──▶  traefik :443 ──▶  web :3000  (dashboard + /api/webhook)
                                                      │
                                           postgres ──┼── redis (cola BullMQ)
                                                      │
@@ -29,13 +28,13 @@ Instagram (Meta)  ──webhook──▶  caddy :443  ──▶  web :3000  (das
 - **worker**: proceso siempre encendido que consume la cola y envía. Sin worker, los webhooks llegan pero ningún DM sale.
 - **cron**: llama a `/api/cron/*` cada 5 minutos y una vez al día. El job diario `refresh-tokens` es el que importa: sin él, el token de Instagram expira a los 60 días y todo deja de funcionar sin ningún error.
 - **postgres** y **redis**: solo accesibles desde la red interna de compose. Redis con persistencia y `noeviction`, que BullMQ exige.
-- **caddy**: lo único con puertos al exterior (80 y 443).
+- **traefik**: no es parte de este stack. Es el proxy que Hostinger dejó en `/docker/traefik` (red host, puertos 80 y 443, Let's Encrypt). Nuestro `web` lleva etiquetas `traefik.*` y Traefik lo descubre solo. Ningún contenedor nuestro publica puertos al host.
 
 Los tres contenedores de la app leen el mismo `.env`, así que `ENCRYPTION_KEY` es idéntica en web y worker por construcción. Si difirieran, el worker no podría descifrar el token de Instagram y todo envío fallaría.
 
 ## Instalación en el VPS
 
-Requisitos: Ubuntu con Docker y Docker Compose v2, puertos 80 y 443 abiertos en el firewall de Hostinger, y el DNS de `envios.aprendes.ai` apuntando a la IP del VPS (registro A con host `envios` en Namecheap. Los TXT y MX que Resend ya tiene en ese subdominio no chocan con un registro A).
+Requisitos: Ubuntu con Docker y Docker Compose v2, el Traefik del VPS corriendo (`docker ps | grep traefik`), puertos 80 y 443 abiertos en el firewall de Hostinger, y el DNS de `envios.aprendes.ai` apuntando a la IP del VPS (registro A con host `envios` en Namecheap. Los TXT y MX que Resend ya tiene en ese subdominio no chocan con un registro A).
 
 ```bash
 # 0. Docker, si el VPS no lo trae
@@ -79,7 +78,7 @@ Después de editar el `.env`, `docker compose up -d` relee los valores y reinici
 cd /opt/aprendes-openreply
 
 docker compose ps                    # estado de los contenedores
-docker compose logs -f web           # o worker, cron, caddy
+docker compose logs -f web           # o worker, cron
 scripts/health.sh                    # /api/health desde adentro del contenedor
 
 scripts/backup.sh                    # dump de Postgres en ./backups (conserva 14 días)
@@ -107,7 +106,7 @@ gunzip -c backups/openreply-AAAA-MM-DD-HHMM.sql.gz | docker compose exec -T post
 
 | Síntoma | Dónde mirar |
 | --- | --- |
-| La URL no carga o el certificado falla | `docker compose logs caddy`. Casi siempre es DNS que todavía no propagó o el puerto 80/443 cerrado en el firewall. |
+| La URL no carga o el certificado falla | `docker logs traefik-traefik-1 --tail 50`. Casi siempre es DNS que todavía no propagó, el puerto 80/443 cerrado en el firewall, o Traefik que no ve el contenedor (`docker inspect aprendes-openreply-web-1 --format '{{json .Config.Labels}}'` tiene que mostrar las etiquetas `traefik.*`). |
 | `worker.healthy: false` | `docker compose logs worker`. |
 | El comentario llega (aparece en WebhookEvent) pero no sale el DM | DM Logs en el dashboard muestra el error de Meta. Lo habitual: la cuenta no aceptó la invitación de tester, o el que comentó tiene los DMs cerrados. |
 | Los comentarios reales no llegan pero el botón Probar de Meta sí | La app de Meta está en modo Desarrollo. Ver `docs/meta-app.md`, paso 6. |

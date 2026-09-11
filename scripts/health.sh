@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Muestra /api/health desde adentro del contenedor web (no depende del DNS ni de Caddy).
+# Muestra /api/health desde adentro del contenedor web (no depende del DNS ni de Traefik).
 # status "ok" y worker.healthy true = todo bien. "degraded" = mirá qué check está en error.
 set -euo pipefail
 cd "$(dirname "$0")/.."

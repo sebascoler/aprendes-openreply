@@ -1,14 +1,18 @@
 # OpenReply en el VPS de Aprendes.ai.
 #
-# Seis contenedores: web (Next.js: dashboard + webhook), worker (cola de DMs),
-# cron (refresco de tokens y jobs periódicos), postgres, redis y caddy (HTTPS).
+# Cinco contenedores: web (Next.js: dashboard + webhook), worker (cola de DMs),
+# cron (refresco de tokens y jobs periódicos), postgres y redis.
+#
+# El HTTPS lo da el Traefik que ya corre en el VPS (stack /docker/traefik, red
+# host, proveedor Docker con exposedbydefault=false, resolver "letsencrypt").
+# No se toca: web se anuncia con labels y Traefik lo descubre solo.
 #
 # La imagen de la app se construye directo desde el repo upstream, pinneado al
 # commit OPENREPLY_REF que está en .env. No hay fork: para actualizar se cambia
 # el commit y se reconstruye (scripts/update.sh).
 #
-# Todo lo que no sea Caddy queda en la red interna de compose; solo Caddy
-# expone 80/443 al exterior.
+# Nada publica puertos al host: Traefik llega a web por la IP interna del
+# contenedor, y postgres/redis solo son visibles dentro de la red de compose.
 
 x-openreply: &openreply
   image: aprendes-openreply:${OPENREPLY_REF:-main}
@@ -29,6 +33,12 @@ services:
     # hay red hacia Postgres. El worker y el cron esperan a que web esté sano,
     # así que nunca tocan una base sin migrar.
     command: ["sh", "-c", "npx prisma migrate deploy && npm run start"]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.openreply.rule: "Host(`${OPENREPLY_DOMAIN}`)"
+      traefik.http.routers.openreply.entrypoints: websecure
+      traefik.http.routers.openreply.tls.certresolver: letsencrypt
+      traefik.http.services.openreply.loadbalancer.server.port: "3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,24 +108,6 @@ services:
       timeout: 5s
       retries: 10
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      OPENREPLY_DOMAIN: ${OPENREPLY_DOMAIN:?Falta OPENREPLY_DOMAIN en .env}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - web
-
 volumes:
   pgdata:
   redisdata:
-  caddy_data:
-  caddy_config:

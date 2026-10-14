@@ -84,6 +84,7 @@ scripts/health.sh                    # /api/health desde adentro del contenedor
 scripts/backup.sh                    # dump de Postgres en ./backups (conserva 14 días)
 scripts/update.sh                    # reconstruye con el mismo commit (tras git pull de este repo)
 scripts/update.sh <sha>              # actualiza OpenReply a otro commit upstream
+scripts/set-token.sh                 # carga a mano un token de Instagram generado en el panel de Meta (token invalidado, código 190)
 ```
 
 **Backup automático.** Una línea en el crontab del VPS:
@@ -111,6 +112,7 @@ gunzip -c backups/openreply-AAAA-MM-DD-HHMM.sql.gz | docker compose exec -T post
 | El comentario llega (aparece en WebhookEvent) pero no sale el DM | DM Logs en el dashboard muestra el error de Meta. Lo habitual: la cuenta no aceptó la invitación de tester, o el que comentó tiene los DMs cerrados. |
 | Los comentarios reales no llegan pero el botón Probar de Meta sí | La app de Meta está en modo Desarrollo. Ver `docs/meta-app.md`, paso 6. |
 | Dejó de funcionar sin tocar nada, ~2 meses después de conectar | Token expirado: el contenedor `cron` no estaba corriendo. `docker compose logs cron`. Reconectar la cuenta en Settings lo arregla al instante. |
+| Dejó de funcionar justo después de cambiar la contraseña de Instagram o Facebook, o de activar 2FA. `OperationalEvent` muestra `code=190 ... session has been invalidated` | Meta invalidó el token; el cron no puede renovarlo. Reconectar desde Settings con **Connect using your own Meta app** (nunca Disconnect: borra las campañas). Si el flujo OAuth no vuelve, generar el token en el panel de Meta y cargarlo con `scripts/set-token.sh`. |
 
 Las tablas `WebhookEvent`, `DmLog` y `OperationalEvent` de Postgres cuentan dónde se detuvo cada comentario:
 
